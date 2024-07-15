@@ -52,14 +52,3 @@ async def get_pokemons(name: str = "", type: str = "", db: AsyncSession = Depend
     pokemons = result.scalars().all()
     return pokemons
 
-from sqlalchemy import text
-@router.delete("/pokemons")
-async def delete_all_pokemons(db: AsyncSession = Depends(get_db)):
-    try:
-        async with db.begin():
-            stmt = text("TRUNCATE TABLE pokemons RESTART IDENTITY;")
-            await db.execute(stmt)
-            await db.commit()
-        return {"message": "All pokemons deleted successfully"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to delete pokemons: {str(e)}")
