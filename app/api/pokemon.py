@@ -9,8 +9,10 @@ from app.models.pokemon import Pokemon
 
 router = APIRouter()
 
-@router.post("/fetch_pokemons")
-async def fetch_pokemons(db: AsyncSession = Depends(get_db)):
+"""
+Function to fetch and seed the Pokeman data to Database  
+"""
+async def fetch_and_store_pokemons(db: AsyncSession):
     async with httpx.AsyncClient() as client:
         response = await client.get("https://pokeapi.co/api/v2/pokemon?limit=10")
         pokemons = response.json()["results"]
@@ -27,7 +29,17 @@ async def fetch_pokemons(db: AsyncSession = Depends(get_db)):
             )
             db.add(new_pokemon)
         await db.commit()
-    return {"message": "pokemons fetched successfully"}
+
+@router.post("/fetch_pokemons")
+async def fetch_pokemons(db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Pokemon).limit(1))
+    pokemon_exists = result.scalar() is not None
+
+    if pokemon_exists:
+        return {"message": "Pokemon data already present"}
+    
+    await fetch_and_store_pokemons(db)
+    return {"message": "Pokemon data fetched and stored successfully"}
 
 @router.get("/pokemons")
 async def get_pokemons(name: str = "", type: str = "", db: AsyncSession = Depends(get_db)):
@@ -40,3 +52,14 @@ async def get_pokemons(name: str = "", type: str = "", db: AsyncSession = Depend
     pokemons = result.scalars().all()
     return pokemons
 
+from sqlalchemy import text
+@router.delete("/pokemons")
+async def delete_all_pokemons(db: AsyncSession = Depends(get_db)):
+    try:
+        async with db.begin():
+            stmt = text("TRUNCATE TABLE pokemons RESTART IDENTITY;")
+            await db.execute(stmt)
+            await db.commit()
+        return {"message": "All pokemons deleted successfully"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to delete pokemons: {str(e)}")
