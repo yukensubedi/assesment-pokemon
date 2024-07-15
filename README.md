@@ -22,8 +22,15 @@
 
 4. Run migrations to create database schema:
     ```bash
+    alembic init alembic
+    ```
+    ```bash
+    alembic revision --autogenerate -m "Create pokemons table"
+    ```
+    ```bash
     alembic upgrade head
     ```
+    
 
 5. Start the API server:
     ```bash
